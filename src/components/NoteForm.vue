@@ -4,7 +4,7 @@
     </el-col>
     <el-col :span="22">
       <div>
-        <el-input type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" v-model="localInput" placeholder="说说今天做点什么吧！">
+        <el-input type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" v-model="localInput" placeholder="添加你的笔记！格式： #标签 内容...">
         </el-input>
       </div>
       <el-row>
@@ -15,8 +15,8 @@
           </div>
         </el-col>
         <el-col :span="3">
-          <el-button type="danger" round @click="submitText" style="margin-top: 5px;">
-            发送
+          <el-button type="success" round @click="submitText" style="margin-top: 5px;">
+            send
           </el-button>
         </el-col>
       </el-row>
@@ -35,7 +35,7 @@ const open4 = (errormsg) => {
   ElMessage.error(errormsg)
 }
 export default {
-  name: 'HelloWorld',
+  name: 'NoteForm',
   data() {
     return {
       localInput: '', // 用于文本框的本地数据
@@ -44,7 +44,7 @@ export default {
       loading: false
     };
   },
-  props:['addTodo'],
+  props:['addNote'],
   methods: {
 
     submitText() {
@@ -52,31 +52,46 @@ export default {
 
       const dataTosend = {
         text: this.localInput,
-        msgid: 5
+        msgid: 6
       };
       axios.post('/login', dataTosend)
         .then(response => {
           console.log('服务器响应:', response.data);
-          this.recivedata = response.data.todos;
-    
-
+          this.recivedata = response.data.note;
           this.showMessage = true;
           // 处理服务器的响应
           this.loading = false;
           this.localInput = ''
+          console.log("--------------")
+          console.log(this.recivedata)
+          console.log("--------------")
           // this.$emit('inputSubmitted', this.recivedata); // 向父组件发送事件
           // const todoObj = {id:nanoid(),title:this.recivedata,done:false}
+    
           const todoObj = this.recivedata.map(item => {
             return {
               id: nanoid(),
-              title: item,
+              title: JSON.parse(item),
               done: false
             };
           });
+
+          // 使用reduce按照label分组
+          const groupedByLabel = todoObj.reduce((acc, cur) => {
+              const label = cur.title.label;
+              if (!acc[label]) {
+                  acc[label] = [];
+              }
+              acc[label].push({
+                  content: cur.title.content,
+                  createTime: cur.title.createTime
+              });
+              return acc;
+          }, {});
+          console.log(groupedByLabel);
           this.recivedata = ''
-          console.log(todoObj)
           if (todoObj[0].title !== 'null') {
-            this.addTodo(todoObj);
+            this.addNote(groupedByLabel);
           } else {
             open4("未提取到关键词！")
           }
